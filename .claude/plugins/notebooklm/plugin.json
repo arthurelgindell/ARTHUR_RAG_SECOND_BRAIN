@@ -1,0 +1,11 @@
+{
+  "name": "notebooklm",
+  "version": "1.0.0",
+  "description": "Google NotebookLM integration for research, content generation, and knowledge management",
+  "skills": [
+    "skills/notebooklm-integration.md"
+  ],
+  "commands": [
+    "commands/notebooklm-auth.md"
+  ]
+}

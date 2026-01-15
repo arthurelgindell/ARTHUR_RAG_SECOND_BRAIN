@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARTHUR_RAG System Documentation</title>
+    <style>
+        :root {
+            --bg-primary: #0a0f1c;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-cyan: #06b6d4;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 60%);
+            animation: bgMove 30s ease-in-out infinite;
+        }
+
+        @keyframes bgMove {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, 2%) rotate(1deg); }
+            66% { transform: translate(-2%, 1%) rotate(-1deg); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Status badges */
+        .status-grid {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.online { background: var(--accent-green); }
+        .status-dot.offline { background: var(--accent-red); }
+        .status-dot.warning { background: var(--accent-orange); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            background: rgba(10, 15, 28, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            padding: 1rem 0;
+            margin: 2rem 0;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+
+        /* Section styling */
+        section {
+            margin: 4rem 0;
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Feature lists */
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        /* Code blocks */
+        pre {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            margin: 1rem 0;
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            background: var(--bg-secondary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+
+        tr:hover td {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Workflow diagrams */
+        .workflow-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        .workflow-svg {
+            width: 100%;
+            min-width: 800px;
+            height: auto;
+        }
+
+        .workflow-node {
+            transition: all 0.3s ease;
+        }
+
+        .workflow-node:hover {
+            filter: brightness(1.2);
+        }
+
+        /* Animated arrows */
+        .flow-path {
+            stroke-dasharray: 8;
+            animation: flowAnimation 1s linear infinite;
+        }
+
+        @keyframes flowAnimation {
+            from { stroke-dashoffset: 16; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-blue { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .tag-green { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .tag-purple { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .tag-orange { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .tag-red { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .tag-cyan { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Accordion */
+        .accordion {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .accordion-item {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+
+        .accordion-header {
+            background: var(--bg-card);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            background: var(--bg-secondary);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--bg-secondary);
+        }
+
+        .accordion-content.active {
+            max-height: 2000px;
+        }
+
+        .accordion-inner {
+            padding: 1.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 4rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        /* Color coding for systems */
+        .system-notebooklm { --system-color: #ef4444; }
+        .system-lmstudio { --system-color: #8b5cf6; }
+        .system-applenotes { --system-color: #f59e0b; }
+        .system-n8n { --system-color: #10b981; }
+        .system-adversarial { --system-color: #06b6d4; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .logo { font-size: 2.5rem; }
+            h2 { font-size: 1.5rem; }
+            .workflow-container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container">
+        <header>
+            <h1 class="logo">ARTHUR_RAG</h1>
+            <p class="subtitle">A comprehensive AI-augmented knowledge management and automation platform built on Claude Code plugins with local/cloud integration</p>
+
+            <div class="status-grid">
+                <div class="status-badge">
+                    <span class="status-dot online"></span>
+                    <span>LM Studio: Running</span>
+                </div>
+                <div class="status-badge">
+                    <span class="status-dot online"></span>
+                    <span>NotebookLM: Authenticated</span>
+                </div>
+                <div class="status-badge">
+                    <span class="status-dot online"></span>
+                    <span>Apple Notes RAG: Ready</span>
+                </div>
+                <div class="status-badge">
+                    <span class="status-dot offline"></span>
+                    <span>n8n: Offline</span>
+                </div>
+            </div>
+        </header>
+
+        <nav>
+            <ul class="nav-links">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#notebooklm">NotebookLM</a></li>
+                <li><a href="#lmstudio">LM Studio</a></li>
+                <li><a href="#applenotes">Apple Notes RAG</a></li>
+                <li><a href="#n8n">n8n Automation</a></li>
+                <li><a href="#adversarial">Adversarial Validator</a></li>
+                <li><a href="#workflows">Workflow Diagrams</a></li>
+            </ul>
+        </nav>
+
+        <!-- Overview Section -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));">
+                    <span style="filter: grayscale(1) brightness(10);">&#128640;</span>
+                </div>
+                <h2>System Overview</h2>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">6</div>
+                    <div class="metric-label">Integrated Systems</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">69</div>
+                    <div class="metric-label">Total Files</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">27</div>
+                    <div class="metric-label">Subdirectories</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">31+</div>
+                    <div class="metric-label">MCP Tools</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1084</div>
+                    <div class="metric-label">Notes Indexed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2</div>
+                    <div class="metric-label">LLM Models Loaded</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Directory Structure</h3>
+                <pre>ARTHUR_RAG/
+├── .claude/
+│   ├── settings.json         <span style="color: var(--accent-green);"># Global hooks & preferences</span>
+│   ├── plugins/
+│   │   ├── notebooklm/       <span style="color: var(--accent-red);"># Google NotebookLM integration</span>
+│   │   ├── lm-studio/        <span style="color: var(--accent-purple);"># Local LLM inference</span>
+│   │   ├── apple-notes-rag/  <span style="color: var(--accent-orange);"># Vector search for Apple Notes</span>
+│   │   ├── n8n-local/        <span style="color: var(--accent-green);"># Workflow automation</span>
+│   │   ├── n8n-mcp/          <span style="color: var(--accent-green);"># n8n MCP bridge</span>
+│   │   └── adversarial-validator/ <span style="color: var(--accent-cyan);"># Design validation</span>
+│   └── SESSION_STATE.md      <span style="color: var(--text-secondary);"># Development log</span>
+└── system-documentation.html  <span style="color: var(--text-secondary);"># This file</span></pre>
+            </div>
+
+            <div class="card-grid">
+                <div class="card system-notebooklm">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="tag tag-red">NotebookLM</span>
+                        <span class="tag tag-green">Online</span>
+                    </div>
+                    <p>Research & content generation via Google's NotebookLM API. Supports web search, Drive integration, audio/video generation, and batch processing.</p>
+                </div>
+                <div class="card system-lmstudio">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="tag tag-purple">LM Studio</span>
+                        <span class="tag tag-green">Running</span>
+                    </div>
+                    <p>Local LLM inference with OpenAI-compatible API. Powers embeddings for RAG and provides chat/completion capabilities offline.</p>
+                </div>
+                <div class="card system-applenotes">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="tag tag-orange">Apple Notes RAG</span>
+                        <span class="tag tag-green">Ready</span>
+                    </div>
+                    <p>Complete RAG pipeline for Apple Notes with incremental sync, vector search, and freshness-aware retrieval using LanceDB.</p>
+                </div>
+                <div class="card system-n8n">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="tag tag-green">n8n Local</span>
+                        <span class="tag tag-red">Offline</span>
+                    </div>
+                    <p>Programmatic workflow creation and deployment for n8n automation platform. Includes builder API and pre-built templates.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- NotebookLM Section -->
+        <section id="notebooklm">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #ef4444, #f97316);">
+                    <span style="filter: grayscale(1) brightness(10);">&#128218;</span>
+                </div>
+                <h2>NotebookLM Integration</h2>
+            </div>
+
+            <div class="card">
+                <p><strong>Purpose:</strong> Google NotebookLM integration for research, content generation, and knowledge management via MCP protocol.</p>
+                <p><strong>Location:</strong> <code>.claude/plugins/notebooklm/</code></p>
+            </div>
+
+            <h3>Core Capabilities (31 MCP Tools)</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <h4 style="color: var(--accent-blue); margin-bottom: 0.75rem;">Notebook Management</h4>
+                    <ul class="feature-list">
+                        <li><span class="feature-icon" style="background: var(--accent-blue);">+</span> notebook_create - Create new notebooks</li>
+                        <li><span class="feature-icon" style="background: var(--accent-blue);">&#128269;</span> notebook_list - List all notebooks</li>
+                        <li><span class="feature-icon" style="background: var(--accent-blue);">&#128221;</span> notebook_rename - Rename notebooks</li>
+                        <li><span class="feature-icon" style="background: var(--accent-red);">&#128465;</span> notebook_delete - Delete notebooks</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-green); margin-bottom: 0.75rem;">Source Management</h4>
+                    <ul class="feature-list">
+                        <li><span class="feature-icon" style="background: var(--accent-green);">&#127760;</span> notebook_add_url - Add web/YouTube sources</li>
+                        <li><span class="feature-icon" style="background: var(--accent-green);">&#128196;</span> notebook_add_text - Add pasted text</li>
+                        <li><span class="feature-icon" style="background: var(--accent-green);">&#128193;</span> notebook_add_drive - Add Google Drive docs</li>
+                        <li><span class="feature-icon" style="background: var(--accent-green);">&#128259;</span> source_sync_drive - Sync Drive sources</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-purple); margin-bottom: 0.75rem;">AI Research</h4>
+                    <ul class="feature-list">
+                        <li><span class="feature-icon" style="background: var(--accent-purple);">&#128270;</span> research_start - Deep/fast research</li>
+                        <li><span class="feature-icon" style="background: var(--accent-purple);">&#9200;</span> research_status - Poll progress</li>
+                        <li><span class="feature-icon" style="background: var(--accent-purple);">&#128229;</span> research_import - Import discoveries</li>
+                        <li><span class="feature-icon" style="background: var(--accent-purple);">&#128172;</span> notebook_query - Ask questions</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-orange); margin-bottom: 0.75rem;">Content Generation</h4>
+                    <ul class="feature-list">
+                        <li><span class="feature-icon" style="background: var(--accent-orange);">&#127908;</span> audio_overview_create - Podcasts</li>
+                        <li><span class="feature-icon" style="background: var(--accent-orange);">&#127909;</span> video_overview_create - Videos</li>
+                        <li><span class="feature-icon" style="background: var(--accent-orange);">&#128202;</span> infographic_create - Infographics</li>
+                        <li><span class="feature-icon" style="background: var(--accent-orange);">&#128203;</span> slide_deck_create - Presentations</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Token Optimization</h3>
+            <div class="card">
+                <p>The <code>batch_processor.py</code> script extracts content locally for processing, achieving <strong>up to 98% token savings</strong> by avoiding repeated cloud API calls.</p>
+                <pre># Extract all sources from a notebook locally
+python3 .claude/plugins/notebooklm/scripts/batch_processor.py extract &lt;notebook_id&gt;
+
+# Process with local LLM instead of cloud
+python3 .claude/plugins/notebooklm/scripts/batch_processor.py analyze &lt;notebook_id&gt; --local</pre>
+            </div>
+
+            <h3>Commands</h3>
+            <table>
+                <tr><th>Command</th><th>Description</th></tr>
+                <tr><td><code>/notebooklm-auth</code></td><td>Authenticate with NotebookLM MCP</td></tr>
+                <tr><td><code>/deep-research</code></td><td>Context-forked deep research (isolated session)</td></tr>
+            </table>
+        </section>
+
+        <!-- LM Studio Section -->
+        <section id="lmstudio">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);">
+                    <span style="filter: grayscale(1) brightness(10);">&#129302;</span>
+                </div>
+                <h2>LM Studio Integration</h2>
+            </div>
+
+            <div class="card">
+                <p><strong>Purpose:</strong> Local LLM inference and embedding generation via OpenAI-compatible API.</p>
+                <p><strong>Base URL:</strong> <code>http://localhost:1234/v1</code></p>
+            </div>
+
+            <h3>Currently Loaded Models</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span class="tag tag-purple">Chat Model</span>
+                        <span style="color: var(--accent-green);">~125 tok/s</span>
+                    </div>
+                    <h4 style="margin-bottom: 0.5rem;">nvidia/nemotron-3-nano</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Fast inference for chat and completion tasks</p>
+                </div>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span class="tag tag-cyan">Embedding Model</span>
+                        <span style="color: var(--accent-green);">768 dims</span>
+                    </div>
+                    <h4 style="margin-bottom: 0.5rem;">nomic-embed-text-v1.5</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Text embeddings for RAG and semantic search</p>
+                </div>
+            </div>
+
+            <h3>API Endpoints</h3>
+            <table>
+                <tr><th>Method</th><th>Endpoint</th><th>Purpose</th></tr>
+                <tr><td><span class="tag tag-green">POST</span></td><td><code>/v1/chat/completions</code></td><td>Chat inference</td></tr>
+                <tr><td><span class="tag tag-green">POST</span></td><td><code>/v1/embeddings</code></td><td>Text embeddings</td></tr>
+                <tr><td><span class="tag tag-blue">GET</span></td><td><code>/v1/models</code></td><td>List loaded models</td></tr>
+                <tr><td><span class="tag tag-green">POST</span></td><td><code>/v1/completions</code></td><td>Text completions</td></tr>
+            </table>
+
+            <h3>Usage Example</h3>
+            <pre><span style="color: var(--accent-purple);">from</span> openai <span style="color: var(--accent-purple);">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span style="color: var(--accent-green);">"http://localhost:1234/v1"</span>,
+    api_key=<span style="color: var(--accent-green);">"lm-studio"</span>
+)
+
+<span style="color: var(--text-secondary);"># Chat completion</span>
+response = client.chat.completions.create(
+    model=<span style="color: var(--accent-green);">"nvidia/nemotron-3-nano"</span>,
+    messages=[{<span style="color: var(--accent-green);">"role"</span>: <span style="color: var(--accent-green);">"user"</span>, <span style="color: var(--accent-green);">"content"</span>: <span style="color: var(--accent-green);">"Hello"</span>}],
+    temperature=<span style="color: var(--accent-orange);">0.7</span>
+)
+
+<span style="color: var(--text-secondary);"># Generate embeddings</span>
+embedding = client.embeddings.create(
+    model=<span style="color: var(--accent-green);">"text-embedding-nomic-embed-text-v1.5"</span>,
+    input=<span style="color: var(--accent-green);">"Text to embed"</span>
+)</pre>
+
+            <h3>Recommended Models by Task</h3>
+            <table>
+                <tr><th>Task</th><th>Model</th><th>Context</th><th>Notes</th></tr>
+                <tr><td>Reasoning</td><td>DeepSeek-R1 Distillations</td><td>8K-32K</td><td>Step-by-step thinking</td></tr>
+                <tr><td>Coding</td><td>Qwen3 Coder</td><td>256K</td><td>Multi-step tool use</td></tr>
+                <tr><td>Vision</td><td>Qwen2.5-VL, LFM2.5-VL</td><td>8K-32K</td><td>Document/image understanding</td></tr>
+                <tr><td>Embeddings</td><td>Nomic Embed (768-dim)</td><td>N/A</td><td>RAG and semantic search</td></tr>
+            </table>
+
+            <h3>VRAM Requirements</h3>
+            <div class="card">
+                <p><strong>Formula:</strong> <code>VRAM = Parameters × Multiplier</code></p>
+                <ul class="feature-list">
+                    <li><span class="feature-icon" style="background: var(--accent-green);">Q4</span> Q4_K_M quantization: <code>Params × 0.6</code></li>
+                    <li><span class="feature-icon" style="background: var(--accent-orange);">Q8</span> Q8 quantization: <code>Params × 1.2</code></li>
+                    <li><span class="feature-icon" style="background: var(--accent-red);">FP16</span> FP16 precision: <code>Params × 2.4</code></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Apple Notes RAG Section -->
+        <section id="applenotes">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                    <span style="filter: grayscale(1) brightness(10);">&#128466;</span>
+                </div>
+                <h2>Apple Notes RAG</h2>
+            </div>
+
+            <div class="card">
+                <p><strong>Purpose:</strong> Complete RAG system for Apple Notes with incremental sync and local LLM embeddings.</p>
+                <p><strong>Location:</strong> <code>.claude/plugins/apple-notes-rag/</code></p>
+                <p><strong>Database:</strong> <code>~/.apple-notes-rag/</code> (LanceDB)</p>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">1084</div>
+                    <div class="metric-label">Notes Indexed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">39</div>
+                    <div class="metric-label">Folders</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">768</div>
+                    <div class="metric-label">Vector Dimensions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">~5 MB</div>
+                    <div class="metric-label">Database Size</div>
+                </div>
+            </div>
+
+            <h3>Core Scripts</h3>
+            <table>
+                <tr><th>Script</th><th>Purpose</th></tr>
+                <tr><td><code>export_notes.py</code></td><td>JXA wrapper for Apple Notes export</td></tr>
+                <tr><td><code>sync_to_rag.py</code></td><td>Incremental sync to LanceDB with change detection</td></tr>
+                <tr><td><code>query_rag.py</code></td><td>Semantic search with freshness scoring</td></tr>
+                <tr><td><code>sync_daemon.py</code></td><td>Background sync daemon</td></tr>
+                <tr><td><code>manage_daemon.py</code></td><td>Daemon lifecycle management</td></tr>
+            </table>
+
+            <h3>Search Query Types</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <h4 style="color: var(--accent-blue);">current</h4>
+                    <p style="color: var(--text-secondary);">Prioritize recent notes for contact info, current status</p>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-green);">balanced</h4>
+                    <p style="color: var(--text-secondary);">Default moderate freshness weight</p>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-purple);">historical</h4>
+                    <p style="color: var(--text-secondary);">No freshness penalty for research, audit trails</p>
+                </div>
+                <div class="card">
+                    <h4 style="color: var(--accent-orange);">auto</h4>
+                    <p style="color: var(--text-secondary);">Auto-detect based on query keywords</p>
+                </div>
+            </div>
+
+            <h3>Commands</h3>
+            <pre><span style="color: var(--text-secondary);"># Incremental sync (only changed notes)</span>
+/sync-notes
+
+<span style="color: var(--text-secondary);"># Full rebuild</span>
+/sync-notes mode=full
+
+<span style="color: var(--text-secondary);"># Semantic search</span>
+/query-notes query="budget planning ideas"
+
+<span style="color: var(--text-secondary);"># Filter by folder</span>
+/query-notes query="code snippets" folder="Development"
+
+<span style="color: var(--text-secondary);"># Model management</span>
+/models action=status
+/models action=recommend task=embeddings</pre>
+
+            <h3>Performance</h3>
+            <table>
+                <tr><th>Operation</th><th>Time</th><th>Notes</th></tr>
+                <tr><td>Full export (100 notes)</td><td>5-10 sec</td><td>JXA overhead</td></tr>
+                <tr><td>Full sync (100 notes)</td><td>2-5 min</td><td>Embedding generation</td></tr>
+                <tr><td>Incremental sync (5 changes)</td><td>10-30 sec</td><td>Only changed notes</td></tr>
+                <tr><td>Semantic search</td><td>200-500 ms</td><td>Including embedding</td></tr>
+            </table>
+        </section>
+
+        <!-- n8n Section -->
+        <section id="n8n">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                    <span style="filter: grayscale(1) brightness(10);">&#9881;</span>
+                </div>
+                <h2>n8n Workflow Automation</h2>
+            </div>
+
+            <div class="card">
+                <p><strong>Purpose:</strong> Programmatic creation and management of n8n workflows for local automation.</p>
+                <p><strong>Location:</strong> <code>.claude/plugins/n8n-local/</code></p>
+                <p><strong>Status:</strong> <span class="tag tag-red">Offline</span> - Workflows saved locally for import</p>
+            </div>
+
+            <h3>Server Configuration</h3>
+            <table>
+                <tr><th>Service</th><th>URL</th></tr>
+                <tr><td>n8n UI</td><td><code>http://localhost:5678</code></td></tr>
+                <tr><td>n8n API</td><td><code>http://localhost:5678/api/v1</code></td></tr>
+                <tr><td>Docker Internal</td><td><code>http://host.docker.internal:5678</code></td></tr>
+                <tr><td>Webhook Base</td><td><code>http://localhost:5678/webhook/</code></td></tr>
+            </table>
+
+            <h3>Pre-Built Workflow Templates</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <span class="tag tag-blue">slack-notify.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Slack notification workflow</p>
+                </div>
+                <div class="card">
+                    <span class="tag tag-purple">calendar-today.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Calendar integration</p>
+                </div>
+                <div class="card">
+                    <span class="tag tag-red">error-handler.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Error handling workflow</p>
+                </div>
+                <div class="card">
+                    <span class="tag tag-green">gmail-search.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Gmail search integration</p>
+                </div>
+                <div class="card">
+                    <span class="tag tag-orange">ai-briefing.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">AI-powered briefing</p>
+                </div>
+                <div class="card">
+                    <span class="tag tag-cyan">token-health-check.json</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">Token health monitoring</p>
+                </div>
+            </div>
+
+            <h3>Node Types</h3>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Trigger Nodes</span>
+                        <span>&#9662;</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <code>webhook</code>, <code>scheduleTrigger</code>, <code>manualTrigger</code>, <code>errorTrigger</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Action Nodes</span>
+                        <span>&#9662;</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <code>httpRequest</code>, <code>executeCommand</code>, <code>code</code> (JS/Python), <code>set</code>, <code>respondToWebhook</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Flow Control</span>
+                        <span>&#9662;</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <code>if</code>, <code>switch</code>, <code>merge</code>, <code>splitInBatches</code>, <code>loop</code>, <code>wait</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>AI/LangChain Nodes</span>
+                        <span>&#9662;</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <code>AI Agent</code>, <code>OpenAI Chat Model</code>, <code>Tools Agent</code>, <code>Memory</code>, <code>HTTP Request Tool</code>, <code>Code Tool</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Local LLM Integration</h3>
+            <pre><span style="color: var(--text-secondary);">// n8n node configuration for local LLM via LM Studio</span>
+{
+  <span style="color: var(--accent-green);">"type"</span>: <span style="color: var(--accent-orange);">"@n8n/n8n-nodes-langchain.lmChatOpenAi"</span>,
+  <span style="color: var(--accent-green);">"parameters"</span>: {
+    <span style="color: var(--accent-green);">"model"</span>: <span style="color: var(--accent-orange);">"deepseek-r1-distill-qwen-7b"</span>,
+    <span style="color: var(--accent-green);">"options"</span>: {
+      <span style="color: var(--accent-green);">"baseURL"</span>: <span style="color: var(--accent-orange);">"http://host.docker.internal:1234/v1"</span>,
+      <span style="color: var(--accent-green);">"timeout"</span>: <span style="color: var(--accent-blue);">300000</span>
+    }
+  }
+}</pre>
+        </section>
+
+        <!-- Adversarial Validator Section -->
+        <section id="adversarial">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);">
+                    <span style="filter: grayscale(1) brightness(10);">&#128737;</span>
+                </div>
+                <h2>Adversarial Validator</h2>
+            </div>
+
+            <div class="card">
+                <p><strong>Purpose:</strong> Rigorous adversarial validation for proposed solutions, architectures, and design decisions.</p>
+                <p><strong>Location:</strong> <code>.claude/plugins/adversarial-validator/</code></p>
+            </div>
+
+            <h3>Five-Stage Validation Protocol</h3>
+            <div class="workflow-container">
+                <svg class="workflow-svg" viewBox="0 0 900 120" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Stage boxes -->
+                    <rect x="10" y="30" width="150" height="60" rx="8" fill="#1e3a5f" stroke="#3b82f6" stroke-width="2"/>
+                    <text x="85" y="55" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="600">Stage 1</text>
+                    <text x="85" y="72" text-anchor="middle" fill="#94a3b8" font-size="9">Pre-Mortem</text>
+
+                    <rect x="190" y="30" width="150" height="60" rx="8" fill="#1e3a5f" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="265" y="55" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="600">Stage 2</text>
+                    <text x="265" y="72" text-anchor="middle" fill="#94a3b8" font-size="9">Steel-Man</text>
+
+                    <rect x="370" y="30" width="150" height="60" rx="8" fill="#1e3a5f" stroke="#10b981" stroke-width="2"/>
+                    <text x="445" y="55" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="600">Stage 3</text>
+                    <text x="445" y="72" text-anchor="middle" fill="#94a3b8" font-size="9">Socratic Probing</text>
+
+                    <rect x="550" y="30" width="150" height="60" rx="8" fill="#1e3a5f" stroke="#f59e0b" stroke-width="2"/>
+                    <text x="625" y="55" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="600">Stage 4</text>
+                    <text x="625" y="72" text-anchor="middle" fill="#94a3b8" font-size="9">Constitutional</text>
+
+                    <rect x="730" y="30" width="150" height="60" rx="8" fill="#1e3a5f" stroke="#ef4444" stroke-width="2"/>
+                    <text x="805" y="55" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="600">Stage 5</text>
+                    <text x="805" y="72" text-anchor="middle" fill="#94a3b8" font-size="9">Argumentation</text>
+
+                    <!-- Arrows -->
+                    <path d="M160 60 L190 60" stroke="#3b82f6" stroke-width="2" class="flow-path" marker-end="url(#arrow)"/>
+                    <path d="M340 60 L370 60" stroke="#8b5cf6" stroke-width="2" class="flow-path" marker-end="url(#arrow)"/>
+                    <path d="M520 60 L550 60" stroke="#10b981" stroke-width="2" class="flow-path" marker-end="url(#arrow)"/>
+                    <path d="M700 60 L730 60" stroke="#f59e0b" stroke-width="2" class="flow-path" marker-end="url(#arrow)"/>
+
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <h3>Eight Constitutional Principles</h3>
+            <div class="card-grid">
+                <div class="card"><strong>1. Security First</strong></div>
+                <div class="card"><strong>2. Production Readiness</strong></div>
+                <div class="card"><strong>3. Failure Mode Awareness</strong></div>
+                <div class="card"><strong>4. Maintainability Over Cleverness</strong></div>
+                <div class="card"><strong>5. Evidence-Based Criticism</strong></div>
+                <div class="card"><strong>6. Constructive Intent</strong></div>
+                <div class="card"><strong>7. Calibrated Severity</strong></div>
+                <div class="card"><strong>8. Intellectual Honesty</strong></div>
+            </div>
+
+            <h3>Severity Classification</h3>
+            <table>
+                <tr><th>Severity</th><th>Criteria</th><th>Action</th></tr>
+                <tr>
+                    <td><span class="tag tag-red">BLOCKING</span></td>
+                    <td>Security vulnerability, data loss, immediate harm</td>
+                    <td>Must fix before merge</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-orange">HIGH</span></td>
+                    <td>Significant reliability/performance impact</td>
+                    <td>Should fix before merge</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-blue">MEDIUM</span></td>
+                    <td>Technical debt, standards deviation</td>
+                    <td>Fix within sprint</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-green">SUGGESTION</span></td>
+                    <td>Enhancement for quality improvement</td>
+                    <td>Consider for future</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- Workflow Diagrams Section -->
+        <section id="workflows">
+            <div class="section-header">
+                <div class="section-icon" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));">
+                    <span style="filter: grayscale(1) brightness(10);">&#128200;</span>
+                </div>
+                <h2>Workflow Diagrams</h2>
+            </div>
+
+            <h3>Master System Integration</h3>
+            <div class="workflow-container">
+                <svg class="workflow-svg" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background grid -->
+                    <defs>
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+                        </pattern>
+                    </defs>
+                    <rect width="900" height="500" fill="url(#grid)"/>
+
+                    <!-- Central Hub -->
+                    <circle cx="450" cy="250" r="60" fill="#1e3a5f" stroke="#3b82f6" stroke-width="3"/>
+                    <text x="450" y="245" text-anchor="middle" fill="#f1f5f9" font-size="12" font-weight="700">Claude Code</text>
+                    <text x="450" y="262" text-anchor="middle" fill="#94a3b8" font-size="10">Plugin Orchestrator</text>
+
+                    <!-- NotebookLM -->
+                    <g class="workflow-node">
+                        <rect x="50" y="80" width="160" height="80" rx="12" fill="#1e2a3f" stroke="#ef4444" stroke-width="2"/>
+                        <text x="130" y="115" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="600">NotebookLM</text>
+                        <text x="130" y="135" text-anchor="middle" fill="#94a3b8" font-size="9">Research & Generation</text>
+                        <text x="130" y="150" text-anchor="middle" fill="#94a3b8" font-size="8">31 MCP Tools</text>
+                    </g>
+                    <path d="M210 120 Q 300 120 390 200" stroke="#ef4444" stroke-width="2" fill="none" class="flow-path"/>
+
+                    <!-- LM Studio -->
+                    <g class="workflow-node">
+                        <rect x="690" y="80" width="160" height="80" rx="12" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="2"/>
+                        <text x="770" y="115" text-anchor="middle" fill="#8b5cf6" font-size="11" font-weight="600">LM Studio</text>
+                        <text x="770" y="135" text-anchor="middle" fill="#94a3b8" font-size="9">Local LLM Inference</text>
+                        <text x="770" y="150" text-anchor="middle" fill="#94a3b8" font-size="8">localhost:1234</text>
+                    </g>
+                    <path d="M690 120 Q 600 120 510 200" stroke="#8b5cf6" stroke-width="2" fill="none" class="flow-path"/>
+
+                    <!-- Apple Notes RAG -->
+                    <g class="workflow-node">
+                        <rect x="50" y="340" width="160" height="80" rx="12" fill="#1e2a3f" stroke="#f59e0b" stroke-width="2"/>
+                        <text x="130" y="375" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="600">Apple Notes RAG</text>
+                        <text x="130" y="395" text-anchor="middle" fill="#94a3b8" font-size="9">Vector Search</text>
+                        <text x="130" y="410" text-anchor="middle" fill="#94a3b8" font-size="8">1084 Notes | LanceDB</text>
+                    </g>
+                    <path d="M210 380 Q 300 380 390 300" stroke="#f59e0b" stroke-width="2" fill="none" class="flow-path"/>
+
+                    <!-- n8n -->
+                    <g class="workflow-node">
+                        <rect x="690" y="340" width="160" height="80" rx="12" fill="#1e2a3f" stroke="#10b981" stroke-width="2"/>
+                        <text x="770" y="375" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">n8n Automation</text>
+                        <text x="770" y="395" text-anchor="middle" fill="#94a3b8" font-size="9">Workflow Engine</text>
+                        <text x="770" y="410" text-anchor="middle" fill="#94a3b8" font-size="8">6 Templates</text>
+                    </g>
+                    <path d="M690 380 Q 600 380 510 300" stroke="#10b981" stroke-width="2" fill="none" class="flow-path"/>
+
+                    <!-- Adversarial Validator -->
+                    <g class="workflow-node">
+                        <rect x="370" y="420" width="160" height="60" rx="12" fill="#1e2a3f" stroke="#06b6d4" stroke-width="2"/>
+                        <text x="450" y="450" text-anchor="middle" fill="#06b6d4" font-size="11" font-weight="600">Adversarial Validator</text>
+                        <text x="450" y="468" text-anchor="middle" fill="#94a3b8" font-size="9">5-Stage Protocol</text>
+                    </g>
+                    <path d="M450 310 L 450 420" stroke="#06b6d4" stroke-width="2" class="flow-path"/>
+
+                    <!-- Cross-connections -->
+                    <path d="M210 140 L 690 360" stroke="#334155" stroke-width="1" stroke-dasharray="4"/>
+                    <path d="M210 360 L 690 140" stroke="#334155" stroke-width="1" stroke-dasharray="4"/>
+
+                    <!-- Legend -->
+                    <rect x="20" y="460" width="280" height="30" rx="5" fill="#111827"/>
+                    <circle cx="40" cy="475" r="5" fill="#3b82f6"/>
+                    <text x="55" y="479" fill="#94a3b8" font-size="9">MCP Protocol</text>
+                    <circle cx="130" cy="475" r="5" fill="#8b5cf6"/>
+                    <text x="145" y="479" fill="#94a3b8" font-size="9">HTTP API</text>
+                    <circle cx="210" cy="475" r="5" fill="#f59e0b"/>
+                    <text x="225" y="479" fill="#94a3b8" font-size="9">Local Storage</text>
+                </svg>
+            </div>
+
+            <h3>Apple Notes RAG Pipeline</h3>
+            <div class="workflow-container">
+                <svg class="workflow-svg" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Apple Notes -->
+                    <rect x="20" y="70" width="120" height="60" rx="8" fill="#1e2a3f" stroke="#f59e0b" stroke-width="2"/>
+                    <text x="80" y="95" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">Apple Notes</text>
+                    <text x="80" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">1084 notes</text>
+
+                    <!-- JXA Export -->
+                    <rect x="180" y="70" width="120" height="60" rx="8" fill="#1e2a3f" stroke="#3b82f6" stroke-width="2"/>
+                    <text x="240" y="95" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="600">JXA Export</text>
+                    <text x="240" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">export_notes.py</text>
+
+                    <!-- Change Detection -->
+                    <rect x="340" y="70" width="120" height="60" rx="8" fill="#1e2a3f" stroke="#10b981" stroke-width="2"/>
+                    <text x="400" y="95" text-anchor="middle" fill="#10b981" font-size="10" font-weight="600">Change Detection</text>
+                    <text x="400" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">SHA-256 Hash</text>
+
+                    <!-- LM Studio Embeddings -->
+                    <rect x="500" y="70" width="120" height="60" rx="8" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="560" y="95" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="600">Embeddings</text>
+                    <text x="560" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">LM Studio</text>
+
+                    <!-- LanceDB -->
+                    <rect x="660" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#06b6d4" stroke-width="2"/>
+                    <text x="710" y="95" text-anchor="middle" fill="#06b6d4" font-size="10" font-weight="600">LanceDB</text>
+                    <text x="710" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">768-dim vectors</text>
+
+                    <!-- Search -->
+                    <rect x="800" y="70" width="80" height="60" rx="8" fill="#1e2a3f" stroke="#ef4444" stroke-width="2"/>
+                    <text x="840" y="95" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="600">Search</text>
+                    <text x="840" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">query_rag.py</text>
+
+                    <!-- Arrows -->
+                    <path d="M140 100 L180 100" stroke="#f59e0b" stroke-width="2" class="flow-path" marker-end="url(#arrow2)"/>
+                    <path d="M300 100 L340 100" stroke="#3b82f6" stroke-width="2" class="flow-path" marker-end="url(#arrow2)"/>
+                    <path d="M460 100 L500 100" stroke="#10b981" stroke-width="2" class="flow-path" marker-end="url(#arrow2)"/>
+                    <path d="M620 100 L660 100" stroke="#8b5cf6" stroke-width="2" class="flow-path" marker-end="url(#arrow2)"/>
+                    <path d="M760 100 L800 100" stroke="#06b6d4" stroke-width="2" class="flow-path" marker-end="url(#arrow2)"/>
+
+                    <defs>
+                        <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <h3>NotebookLM Research Flow</h3>
+            <div class="workflow-container">
+                <svg class="workflow-svg" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Query -->
+                    <rect x="20" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#3b82f6" stroke-width="2"/>
+                    <text x="70" y="95" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="600">User Query</text>
+                    <text x="70" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">research_start</text>
+
+                    <!-- MCP -->
+                    <rect x="160" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#ef4444" stroke-width="2"/>
+                    <text x="210" y="95" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="600">MCP Server</text>
+                    <text x="210" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">notebooklm-mcp</text>
+
+                    <!-- Google API -->
+                    <rect x="300" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#10b981" stroke-width="2"/>
+                    <text x="350" y="95" text-anchor="middle" fill="#10b981" font-size="10" font-weight="600">Google API</text>
+                    <text x="350" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">NotebookLM</text>
+
+                    <!-- Poll Status -->
+                    <rect x="440" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#f59e0b" stroke-width="2"/>
+                    <text x="490" y="95" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">Poll Status</text>
+                    <text x="490" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">research_status</text>
+
+                    <!-- Import -->
+                    <rect x="580" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="630" y="95" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="600">Import</text>
+                    <text x="630" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">research_import</text>
+
+                    <!-- Results -->
+                    <rect x="720" y="70" width="100" height="60" rx="8" fill="#1e2a3f" stroke="#06b6d4" stroke-width="2"/>
+                    <text x="770" y="95" text-anchor="middle" fill="#06b6d4" font-size="10" font-weight="600">Notebook</text>
+                    <text x="770" y="112" text-anchor="middle" fill="#94a3b8" font-size="8">Sources Added</text>
+
+                    <!-- Arrows -->
+                    <path d="M120 100 L160 100" stroke="#3b82f6" stroke-width="2" class="flow-path" marker-end="url(#arrow3)"/>
+                    <path d="M260 100 L300 100" stroke="#ef4444" stroke-width="2" class="flow-path" marker-end="url(#arrow3)"/>
+                    <path d="M400 100 L440 100" stroke="#10b981" stroke-width="2" class="flow-path" marker-end="url(#arrow3)"/>
+                    <path d="M540 100 L580 100" stroke="#f59e0b" stroke-width="2" class="flow-path" marker-end="url(#arrow3)"/>
+                    <path d="M680 100 L720 100" stroke="#8b5cf6" stroke-width="2" class="flow-path" marker-end="url(#arrow3)"/>
+
+                    <!-- Loop back arrow -->
+                    <path d="M490 130 C 490 160, 350 160, 350 130" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-dasharray="4" marker-end="url(#arrow3)"/>
+                    <text x="420" y="155" text-anchor="middle" fill="#94a3b8" font-size="8">polling loop</text>
+
+                    <defs>
+                        <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <h3>n8n Workflow Architecture</h3>
+            <div class="workflow-container">
+                <svg class="workflow-svg" viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Trigger Layer -->
+                    <rect x="50" y="20" width="800" height="60" rx="8" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="70" y="40" fill="#10b981" font-size="10" font-weight="600">TRIGGER LAYER</text>
+
+                    <rect x="70" y="45" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#10b981" stroke-width="1"/>
+                    <text x="110" y="64" text-anchor="middle" fill="#94a3b8" font-size="8">Webhook</text>
+
+                    <rect x="170" y="45" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#10b981" stroke-width="1"/>
+                    <text x="210" y="64" text-anchor="middle" fill="#94a3b8" font-size="8">Schedule</text>
+
+                    <rect x="270" y="45" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#10b981" stroke-width="1"/>
+                    <text x="310" y="64" text-anchor="middle" fill="#94a3b8" font-size="8">Manual</text>
+
+                    <!-- Processing Layer -->
+                    <rect x="50" y="90" width="800" height="60" rx="8" fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="70" y="110" fill="#3b82f6" font-size="10" font-weight="600">PROCESSING LAYER</text>
+
+                    <rect x="70" y="115" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#3b82f6" stroke-width="1"/>
+                    <text x="110" y="134" text-anchor="middle" fill="#94a3b8" font-size="8">HTTP Request</text>
+
+                    <rect x="170" y="115" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#3b82f6" stroke-width="1"/>
+                    <text x="210" y="134" text-anchor="middle" fill="#94a3b8" font-size="8">Code (JS)</text>
+
+                    <rect x="270" y="115" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#3b82f6" stroke-width="1"/>
+                    <text x="310" y="134" text-anchor="middle" fill="#94a3b8" font-size="8">Set Data</text>
+
+                    <rect x="370" y="115" width="80" height="30" rx="4" fill="#1e2a3f" stroke="#3b82f6" stroke-width="1"/>
+                    <text x="410" y="134" text-anchor="middle" fill="#94a3b8" font-size="8">IF/Switch</text>
+
+                    <!-- AI Layer -->
+                    <rect x="50" y="160" width="800" height="60" rx="8" fill="rgba(139, 92, 246, 0.1)" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="70" y="180" fill="#8b5cf6" font-size="10" font-weight="600">AI/LANGCHAIN LAYER</text>
+
+                    <rect x="70" y="185" width="100" height="30" rx="4" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="1"/>
+                    <text x="120" y="204" text-anchor="middle" fill="#94a3b8" font-size="8">AI Agent</text>
+
+                    <rect x="190" y="185" width="100" height="30" rx="4" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="1"/>
+                    <text x="240" y="204" text-anchor="middle" fill="#94a3b8" font-size="8">LM Studio Chat</text>
+
+                    <rect x="310" y="185" width="100" height="30" rx="4" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="1"/>
+                    <text x="360" y="204" text-anchor="middle" fill="#94a3b8" font-size="8">Memory</text>
+
+                    <!-- LM Studio connection -->
+                    <rect x="700" y="160" width="130" height="55" rx="8" fill="#1e2a3f" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="765" y="182" text-anchor="middle" fill="#8b5cf6" font-size="10" font-weight="600">LM Studio</text>
+                    <text x="765" y="200" text-anchor="middle" fill="#94a3b8" font-size="8">host.docker.internal:1234</text>
+
+                    <path d="M410 200 L700 187" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4"/>
+
+                    <!-- Flow arrows -->
+                    <path d="M450 60 L450 90" stroke="#10b981" stroke-width="2" class="flow-path"/>
+                    <path d="M450 150 L450 160" stroke="#3b82f6" stroke-width="2" class="flow-path"/>
+                </svg>
+            </div>
+        </section>
+
+        <footer>
+            <p style="margin-bottom: 0.5rem;">ARTHUR_RAG System Documentation</p>
+            <p style="font-size: 0.85rem;">Generated by Claude Code | 6 Integrated Systems | 69 Files | 27 Directories</p>
+        </footer>
+    </div>
+
+    <script>
+        // Accordion functionality
+        function toggleAccordion(header) {
+            const content = header.nextElementSibling;
+            const isActive = content.classList.contains('active');
+
+            // Close all accordions
+            document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+
+            // Open clicked one if it wasn't active
+            if (!isActive) {
+                content.classList.add('active');
+            }
+        }
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Animate on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.card, .metric-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'all 0.5s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

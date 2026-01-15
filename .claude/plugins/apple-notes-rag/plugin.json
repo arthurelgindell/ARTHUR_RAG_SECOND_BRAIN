@@ -1,0 +1,15 @@
+{
+  "name": "apple-notes-rag",
+  "version": "1.0.0",
+  "description": "Apple Notes RAG system with incremental sync and local LLM integration",
+  "skills": ["skills/apple-notes-rag.md"],
+  "agents": [
+    "agents/notes-rag-agent.md",
+    "agents/models-expert-agent.md"
+  ],
+  "commands": [
+    "commands/sync-notes.md",
+    "commands/query-notes.md",
+    "commands/models.md"
+  ]
+}

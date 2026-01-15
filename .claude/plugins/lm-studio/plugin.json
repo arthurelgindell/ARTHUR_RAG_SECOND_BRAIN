@@ -1,0 +1,8 @@
+{
+  "name": "lm-studio",
+  "version": "1.0.0",
+  "description": "LM Studio local LLM integration for running AI models locally",
+  "skills": [
+    "skills/lm-studio-integration.md"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "name": "n8n-mcp",
+  "version": "1.0.0",
+  "description": "N8N workflow automation MCP integration - search nodes, validate configs, manage workflows"
+}

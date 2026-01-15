@@ -1,0 +1,284 @@
+{
+  "name": "AI Daily Briefing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "briefing",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "briefing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize briefing context\nconst now = new Date();\nconst timezone = 'America/Los_Angeles';\n\nreturn [{\n  json: {\n    requestTime: now.toISOString(),\n    date: now.toLocaleDateString('en-US', {\n      timeZone: timezone,\n      weekday: 'long',\n      year: 'numeric',\n      month: 'long',\n      day: 'numeric'\n    }),\n    timezone\n  }\n}];"
+      },
+      "id": "init-briefing",
+      "name": "Initialize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 20,
+        "filters": {
+          "q": "is:unread",
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "id": "gmail-unread",
+      "name": "Gmail Unread",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [650, 200],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "singleEvents": true,
+          "timeMin": "={{ $('Initialize').first().json.requestTime }}",
+          "timeMax": "={{ new Date(Date.now() + 24*60*60*1000).toISOString() }}",
+          "orderBy": "startTime"
+        }
+      },
+      "id": "calendar-today",
+      "name": "Calendar Today",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [650, 400],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate data from Gmail and Calendar\nconst initData = $('Initialize').first().json;\nconst gmailResults = $('Gmail Unread').all();\nconst calendarResults = $('Calendar Today').all();\n\n// Format emails\nconst emails = gmailResults.map(item => {\n  const email = item.json;\n  return {\n    subject: email.subject || '(No Subject)',\n    from: email.from?.value?.[0]?.address || email.from || 'Unknown',\n    snippet: email.snippet?.substring(0, 100) || '',\n    date: email.date\n  };\n}).slice(0, 10);  // Limit to 10 for briefing\n\n// Format events\nconst events = calendarResults.map(item => {\n  const event = item.json;\n  const start = event.start?.dateTime || event.start?.date;\n  return {\n    summary: event.summary || '(No Title)',\n    start: start,\n    location: event.location || '',\n    isAllDay: !event.start?.dateTime\n  };\n});\n\nreturn [{\n  json: {\n    context: initData,\n    unreadEmails: emails,\n    unreadCount: emails.length,\n    todayEvents: events,\n    eventCount: events.length\n  }\n}];"
+      },
+      "id": "aggregate-data",
+      "name": "Aggregate Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build prompt for Claude\nconst data = $input.first().json;\n\nlet prompt = `You are a helpful executive assistant providing a morning briefing. Today is ${data.context.date}.\n\n## Unread Emails (${data.unreadCount} total)\n`;\n\nif (data.unreadEmails.length === 0) {\n  prompt += \"No unread emails - inbox is clear!\\n\";\n} else {\n  data.unreadEmails.forEach((email, i) => {\n    prompt += `${i+1}. From: ${email.from}\\n   Subject: ${email.subject}\\n   Preview: ${email.snippet}...\\n\\n`;\n  });\n}\n\nprompt += `\\n## Today's Calendar (${data.eventCount} events)\\n`;\n\nif (data.todayEvents.length === 0) {\n  prompt += \"No events scheduled - calendar is open!\\n\";\n} else {\n  data.todayEvents.forEach((event, i) => {\n    const time = event.isAllDay ? 'All Day' : new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });\n    prompt += `${i+1}. ${time}: ${event.summary}${event.location ? ' @ ' + event.location : ''}\\n`;\n  });\n}\n\nprompt += `\\n---\\n\\nPlease provide:\n1. A brief summary of my day ahead (2-3 sentences)\n2. Key priorities based on emails and meetings\n3. Any potential scheduling conflicts or concerns\n4. One actionable suggestion for productivity\n\nKeep your response concise and actionable.`;\n\nreturn [{\n  json: {\n    prompt,\n    rawData: data\n  }\n}];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'anthropic/claude-3.5-haiku', max_tokens: 1024, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "claude-api",
+      "name": "OpenRouter API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final briefing response\nconst promptData = $('Build Prompt').first().json;\nconst apiResponse = $input.first().json;\n\nlet analysis = '';\nif (apiResponse.error) {\n  analysis = 'AI analysis unavailable. Please review emails and calendar manually.';\n} else {\n  // OpenRouter format: choices[0].message.content\n  analysis = apiResponse.choices?.[0]?.message?.content || apiResponse.content?.[0]?.text || 'No analysis generated.';\n}\n\nreturn [{\n  json: {\n    success: true,\n    date: promptData.rawData.context.date,\n    summary: {\n      unreadEmails: promptData.rawData.unreadCount,\n      todayEvents: promptData.rawData.eventCount\n    },\n    analysis: analysis,\n    rawData: {\n      emails: promptData.rawData.unreadEmails,\n      events: promptData.rawData.todayEvents\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "content": "## AI Daily Briefing Workflow\n\n### Endpoint\n`GET /webhook/briefing`\n\n### Headers\n`X-API-Key: <webhook_secret>`\n\n### What it does\n1. Fetches unread emails (up to 20)\n2. Fetches today's calendar events\n3. Sends to Claude for analysis\n4. Returns structured briefing\n\n### Requirements\n- Gmail OAuth credential\n- Calendar OAuth credential\n- ANTHROPIC_API_KEY in n8n settings\n\n### Response includes\n- Email summary\n- Calendar overview\n- AI-generated analysis\n- Priorities and suggestions",
+        "height": 440,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Initialize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize": {
+      "main": [
+        [
+          {
+            "node": "Gmail Unread",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calendar Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Unread": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Today": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Data": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "ai"
+    },
+    {
+      "name": "briefing"
+    },
+    {
+      "name": "daily"
+    }
+  ]
+}

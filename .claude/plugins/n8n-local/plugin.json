@@ -1,0 +1,14 @@
+{
+  "name": "n8n-local",
+  "version": "2.0.0",
+  "description": "Local n8n workflow automation server integration for Claude Code",
+  "skills": [
+    "skills/n8n-integration.md"
+  ],
+  "agents": [
+    "agents/n8n-workflow-agent.md"
+  ],
+  "commands": [
+    "commands/n8n-workflow.md"
+  ]
+}

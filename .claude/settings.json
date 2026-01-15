@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/arthurdell/ARTHUR_RAG/.claude/plugins/notebooklm/scripts/service_status.py --compact",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__notebooklm-mcp__research_start|mcp__notebooklm-mcp__audio_overview_create|mcp__notebooklm-mcp__video_overview_create",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '⚠️  Heavy NotebookLM operation - consider local processing for cost savings'"
+          }
+        ]
+      }
+    ]
+  },
+  "preferences": {
+    "token_optimization": {
+      "prefer_local_llm": true,
+      "batch_threshold": 3,
+      "auto_extract": false
+    }
+  }
+}

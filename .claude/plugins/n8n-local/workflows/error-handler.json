@@ -1,0 +1,169 @@
+{
+  "name": "Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "error-handler",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "error-handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract error details from input\nconst input = $input.first().json;\n\nconst errorData = {\n  success: false,\n  error: {\n    code: input.error_code || 'UNKNOWN_ERROR',\n    message: input.error_message || 'An unknown error occurred',\n    workflow: input.workflow_name || 'unknown',\n    timestamp: new Date().toISOString(),\n    context: input.context || {},\n    severity: input.severity || 'MEDIUM'\n  },\n  notified: false\n};\n\n// Determine if we should send notification\nconst shouldNotify = ['HIGH', 'CRITICAL'].includes(errorData.error.severity);\n\nreturn [{\n  json: {\n    ...errorData,\n    shouldNotify\n  }\n}];"
+      },
+      "id": "process-error",
+      "name": "Process Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-notify",
+              "leftValue": "={{ $json.shouldNotify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "should-notify",
+      "name": "Should Notify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-no-notify",
+      "name": "Respond (No Notify)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Slack message\nconst error = $input.first().json.error;\n\nconst slackMessage = {\n  channel: '#alerts',\n  blocks: [\n    {\n      type: 'header',\n      text: {\n        type: 'plain_text',\n        text: `⚠️ ${error.severity}: ${error.code}`,\n        emoji: true\n      }\n    },\n    {\n      type: 'section',\n      fields: [\n        {\n          type: 'mrkdwn',\n          text: `*Workflow:*\\n${error.workflow}`\n        },\n        {\n          type: 'mrkdwn',\n          text: `*Time:*\\n${error.timestamp}`\n        }\n      ]\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Message:*\\n${error.message}`\n      }\n    }\n  ]\n};\n\nreturn [{ json: slackMessage }];"
+      },
+      "id": "prepare-slack",
+      "name": "Prepare Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ...($('Process Error').first().json), notified: true } }}",
+        "options": {}
+      },
+      "id": "respond-notified",
+      "name": "Respond (Notified)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "content": "## Error Handler Workflow\n\nCentralized error handling for all n8n workflows.\n\n### Usage\nCall via HTTP POST to `/webhook/error-handler` with:\n```json\n{\n  \"error_code\": \"GMAIL_AUTH_FAILED\",\n  \"error_message\": \"OAuth token expired\",\n  \"workflow_name\": \"gmail-search\",\n  \"severity\": \"HIGH\",\n  \"context\": {}\n}\n```\n\n### Severity Levels\n- **CRITICAL**: Auth failures, data loss risk\n- **HIGH**: API errors, workflow failures\n- **MEDIUM**: Validation errors, warnings\n- **LOW**: Info messages",
+        "height": 380,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Error": {
+      "main": [
+        [
+          {
+            "node": "Should Notify?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Notify?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond (No Notify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Respond (Notified)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "system"
+    },
+    {
+      "name": "error-handling"
+    }
+  ]
+}

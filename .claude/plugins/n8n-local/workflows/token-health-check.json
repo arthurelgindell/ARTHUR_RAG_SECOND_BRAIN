@@ -1,0 +1,291 @@
+{
+  "name": "Token Health Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "health-check",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 480],
+      "webhookId": "health-check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize health check results\nreturn [{\n  json: {\n    checkTime: new Date().toISOString(),\n    gmail: { status: 'pending', error: null },\n    calendar: { status: 'pending', error: null }\n  }\n}];"
+      },
+      "id": "init-check",
+      "name": "Initialize Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 380]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {},
+        "options": {}
+      },
+      "id": "gmail-check",
+      "name": "Gmail Check",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [650, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "id": "calendar-check",
+      "name": "Calendar Check",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [650, 480],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect results from both checks\nconst initData = $('Initialize Check').first().json;\nconst gmailResult = $('Gmail Check').first();\nconst calendarResult = $('Calendar Check').first();\n\nconst results = {\n  checkTime: initData.checkTime,\n  gmail: {\n    status: gmailResult.error ? 'unhealthy' : 'healthy',\n    error: gmailResult.error?.message || null\n  },\n  calendar: {\n    status: calendarResult.error ? 'unhealthy' : 'healthy',\n    error: calendarResult.error?.message || null\n  }\n};\n\nresults.overall = (results.gmail.status === 'healthy' && results.calendar.status === 'healthy') \n  ? 'healthy' \n  : 'unhealthy';\n\nresults.requiresAction = results.overall === 'unhealthy';\n\nreturn [{ json: results }];"
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 380]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "requires-action",
+              "leftValue": "={{ $json.requiresAction }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "requires-action-check",
+      "name": "Requires Action?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare alert for unhealthy tokens\nconst results = $input.first().json;\n\nconst issues = [];\nif (results.gmail.status === 'unhealthy') {\n  issues.push(`Gmail: ${results.gmail.error || 'Token expired'}`);\n}\nif (results.calendar.status === 'unhealthy') {\n  issues.push(`Calendar: ${results.calendar.error || 'Token expired'}`);\n}\n\nreturn [{\n  json: {\n    severity: 'CRITICAL',\n    error_code: 'OAUTH_TOKEN_UNHEALTHY',\n    error_message: `OAuth tokens require re-authentication: ${issues.join(', ')}`,\n    workflow_name: 'token-health-check',\n    context: results\n  }\n}];"
+      },
+      "id": "prepare-alert",
+      "name": "Prepare Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 280]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-healthy",
+      "name": "Respond (Healthy)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 480]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Aggregate Results').first().json }}",
+        "options": {}
+      },
+      "id": "respond-unhealthy",
+      "name": "Respond (Unhealthy)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1450, 280]
+    },
+    {
+      "parameters": {
+        "content": "## Token Health Check Workflow\n\n### Purpose\nMonitors OAuth token health for Gmail and Calendar.\nRuns every 6 hours automatically.\n\n### Manual Endpoint\n`GET /webhook/health-check`\n\n### Response\n```json\n{\n  \"overall\": \"healthy|unhealthy\",\n  \"gmail\": { \"status\": \"healthy\" },\n  \"calendar\": { \"status\": \"healthy\" },\n  \"requiresAction\": false\n}\n```\n\n### On Failure\n- Sends CRITICAL alert to error handler\n- Action Required: Re-authenticate in n8n UI",
+        "height": 400,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 620]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Initialize Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Initialize Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Check": {
+      "main": [
+        [
+          {
+            "node": "Gmail Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calendar Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Check": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Check": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Requires Action?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requires Action?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond (Healthy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond (Unhealthy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "system"
+    },
+    {
+      "name": "health-check"
+    },
+    {
+      "name": "oauth"
+    }
+  ]
+}

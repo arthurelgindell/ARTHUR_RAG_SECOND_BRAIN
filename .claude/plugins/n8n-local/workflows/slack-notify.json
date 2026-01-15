@@ -1,0 +1,193 @@
+{
+  "name": "Slack Notify",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-notify",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "slack-notify"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and prepare Slack message\nconst input = $input.first().json;\n\nconst channel = input.channel || '#general';\nconst message = input.message || '';\nconst blocks = input.blocks || null;\n\nif (!message && !blocks) {\n  throw new Error('Either message or blocks is required');\n}\n\nreturn [{\n  json: {\n    channel,\n    message,\n    blocks,\n    hasBlocks: !!blocks\n  }\n}];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-blocks",
+              "leftValue": "={{ $json.hasBlocks }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-blocks-check",
+      "name": "Has Blocks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.channel }}"
+        },
+        "text": "={{ $json.message }}",
+        "otherOptions": {}
+      },
+      "id": "slack-simple",
+      "name": "Slack (Simple)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.channel }}"
+        },
+        "text": "={{ $json.message || 'Notification' }}",
+        "blocksUi": "={{ JSON.stringify($json.blocks) }}",
+        "otherOptions": {}
+      },
+      "id": "slack-blocks",
+      "name": "Slack (Blocks)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, channel: $('Validate Input').first().json.channel, timestamp: new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Slack Notify Workflow\n\n### Endpoint\n`POST /webhook/slack-notify`\n\n### Headers\n`X-API-Key: <webhook_secret>`\n\n### Request Body (Simple)\n```json\n{\n  \"channel\": \"#alerts\",\n  \"message\": \"Hello from n8n!\"\n}\n```\n\n### Request Body (Rich)\n```json\n{\n  \"channel\": \"#alerts\",\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Alert Title\"\n      }\n    }\n  ]\n}\n```",
+        "height": 400,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Has Blocks?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Blocks?": {
+      "main": [
+        [
+          {
+            "node": "Slack (Blocks)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack (Simple)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack (Simple)": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack (Blocks)": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "slack"
+    },
+    {
+      "name": "notification"
+    }
+  ]
+}

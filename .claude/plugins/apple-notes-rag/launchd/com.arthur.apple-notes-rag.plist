@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Unique identifier for this job -->
+    <key>Label</key>
+    <string>com.arthur.apple-notes-rag</string>
+
+    <!-- Human-readable description -->
+    <key>ServiceDescription</key>
+    <string>Apple Notes RAG Sync Daemon - Syncs notes to vector database every 10 minutes</string>
+
+    <!-- Command to run -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/arthurdell/ARTHUR_RAG/.claude/plugins/apple-notes-rag/scripts/sync_daemon.py</string>
+    </array>
+
+    <!-- Run every 10 minutes (600 seconds) -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <!-- Also run at load (when launchd starts) -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/arthurdell/ARTHUR_RAG/.claude/plugins/apple-notes-rag/scripts</string>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>LM_STUDIO_URL</key>
+        <string>http://localhost:1234</string>
+        <key>EMBEDDING_MODEL</key>
+        <string>text-embedding-nomic-embed-text-v1.5</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/arthurdell/Library/Python/3.9/lib/python/site-packages</string>
+    </dict>
+
+    <!-- Log stdout -->
+    <key>StandardOutPath</key>
+    <string>/Users/arthurdell/.apple-notes-rag/logs/launchd_stdout.log</string>
+
+    <!-- Log stderr -->
+    <key>StandardErrorPath</key>
+    <string>/Users/arthurdell/.apple-notes-rag/logs/launchd_stderr.log</string>
+
+    <!-- Don't restart on failure (we have our own retry logic) -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Timeout before SIGKILL (30 minutes for large syncs) -->
+    <key>TimeOut</key>
+    <integer>1800</integer>
+
+    <!-- Nice priority (lower = less aggressive, be gentle on system) -->
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <!-- Low priority I/O -->
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <!-- Only run when on AC power (optional - comment out to run on battery) -->
+    <!--
+    <key>LowPriorityBackgroundIO</key>
+    <true/>
+    -->
+
+    <!-- Process type for energy management -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Throttle interval (minimum seconds between runs) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+</dict>
+</plist>

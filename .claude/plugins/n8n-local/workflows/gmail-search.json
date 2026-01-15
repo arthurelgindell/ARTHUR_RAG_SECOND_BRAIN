@@ -1,0 +1,143 @@
+{
+  "name": "Gmail Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gmail-search",
+        "authentication": "headerAuth",
+        "options": {
+          "responseData": "allEntries"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "gmail-search"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and extract search parameters\nconst input = $input.first().json;\n\nconst query = input.query || '';\nconst maxResults = Math.min(input.maxResults || 10, 50);\n\nif (!query) {\n  throw new Error('Search query is required');\n}\n\nreturn [{\n  json: {\n    query,\n    maxResults,\n    requestTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $json.maxResults }}",
+        "filters": {
+          "q": "={{ $json.query }}",
+          "includeSpamTrash": false
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": false
+        }
+      },
+      "id": "gmail-search",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format email results\nconst emails = $input.all();\n\nconst formatted = emails.map(item => {\n  const email = item.json;\n  return {\n    id: email.id,\n    threadId: email.threadId,\n    subject: email.subject || '(No Subject)',\n    from: email.from?.value?.[0]?.address || email.from,\n    to: email.to?.value?.[0]?.address || email.to,\n    date: email.date,\n    snippet: email.snippet,\n    labels: email.labelIds || [],\n    isUnread: email.labelIds?.includes('UNREAD') || false\n  };\n});\n\nreturn [{\n  json: {\n    success: true,\n    count: formatted.length,\n    emails: formatted,\n    query: $('Validate Input').first().json.query,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-results",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Search Workflow\n\n### Endpoint\n`POST /webhook/gmail-search`\n\n### Headers\n`X-API-Key: <webhook_secret>`\n\n### Request Body\n```json\n{\n  \"query\": \"from:billing@example.com\",\n  \"maxResults\": 10\n}\n```\n\n### Query Examples\n- `is:unread` - Unread emails\n- `from:user@domain.com` - From specific sender\n- `subject:invoice` - Subject contains\n- `newer_than:7d` - Last 7 days\n- `has:attachment` - With attachments",
+        "height": 400,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "gmail"
+    },
+    {
+      "name": "search"
+    }
+  ]
+}

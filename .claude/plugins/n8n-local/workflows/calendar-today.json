@@ -1,0 +1,138 @@
+{
+  "name": "Calendar Today",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "calendar-today",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "calendar-today"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate today's date range in user's timezone\nconst now = new Date();\nconst timezone = 'America/Los_Angeles';\n\n// Get start of today\nconst startOfDay = new Date(now.toLocaleString('en-US', { timeZone: timezone }));\nstartOfDay.setHours(0, 0, 0, 0);\n\n// Get end of today\nconst endOfDay = new Date(startOfDay);\nendOfDay.setHours(23, 59, 59, 999);\n\nreturn [{\n  json: {\n    timeMin: startOfDay.toISOString(),\n    timeMax: endOfDay.toISOString(),\n    timezone,\n    date: now.toLocaleDateString('en-US', { \n      timeZone: timezone,\n      weekday: 'long',\n      year: 'numeric',\n      month: 'long',\n      day: 'numeric'\n    })\n  }\n}];"
+      },
+      "id": "calc-date-range",
+      "name": "Calculate Date Range",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "singleEvents": true,
+          "timeMin": "={{ $json.timeMin }}",
+          "timeMax": "={{ $json.timeMax }}",
+          "orderBy": "startTime"
+        }
+      },
+      "id": "google-calendar",
+      "name": "Google Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format calendar events\nconst events = $input.all();\nconst dateInfo = $('Calculate Date Range').first().json;\n\nconst formatted = events.map(item => {\n  const event = item.json;\n  \n  // Parse start/end times\n  const start = event.start?.dateTime || event.start?.date;\n  const end = event.end?.dateTime || event.end?.date;\n  const isAllDay = !event.start?.dateTime;\n  \n  return {\n    id: event.id,\n    summary: event.summary || '(No Title)',\n    description: event.description || '',\n    location: event.location || '',\n    start: start,\n    end: end,\n    isAllDay,\n    status: event.status,\n    htmlLink: event.htmlLink,\n    organizer: event.organizer?.email,\n    attendees: (event.attendees || []).map(a => ({\n      email: a.email,\n      responseStatus: a.responseStatus\n    }))\n  };\n});\n\n// Sort by start time\nformatted.sort((a, b) => new Date(a.start) - new Date(b.start));\n\nreturn [{\n  json: {\n    success: true,\n    date: dateInfo.date,\n    timezone: dateInfo.timezone,\n    count: formatted.length,\n    events: formatted,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-events",
+      "name": "Format Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Calendar Today Workflow\n\n### Endpoint\n`GET /webhook/calendar-today`\n\n### Headers\n`X-API-Key: <webhook_secret>`\n\n### Response\n```json\n{\n  \"success\": true,\n  \"date\": \"Tuesday, January 14, 2026\",\n  \"timezone\": \"America/Los_Angeles\",\n  \"count\": 3,\n  \"events\": [...]\n}\n```\n\n### Notes\n- Returns all events for today\n- Uses America/Los_Angeles timezone\n- Events sorted by start time\n- Includes all-day events",
+        "height": 360,
+        "width": 320
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 480]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Calculate Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Date Range": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar": {
+      "main": [
+        [
+          {
+            "node": "Format Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Events": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "calendar"
+    },
+    {
+      "name": "today"
+    }
+  ]
+}
