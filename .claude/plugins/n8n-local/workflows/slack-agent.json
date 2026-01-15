@@ -1,5 +1,5 @@
 {
-  "name": "ARTHUR Slack Agent",
+  "name": "Brain Slack Agent",
   "nodes": [
     {
       "parameters": {
@@ -55,7 +55,7 @@
     {
       "parameters": {
         "options": {
-          "systemMessage": "You are ARTHUR, a personal AI assistant with access to multiple tools and knowledge sources.\n\nAvailable capabilities:\n- get_calendar: Check today's meetings and schedule\n- search_email: Search Gmail messages by query\n- search_notes: Semantic search through Apple Notes\n- deep_research: Start deep research on a topic using NotebookLM\n- private_query: Query local LLM for private/sensitive questions\n\nGuidelines:\n1. Identify the user's intent from their message\n2. Select the appropriate tool(s) to fulfill the request\n3. Synthesize tool outputs into a helpful, concise response\n4. If the request is unclear, ask for clarification\n5. For multi-step requests, break down and execute sequentially\n\nAlways be concise and actionable - this is Slack, not an essay.\nFormat responses for readability: use bullet points, bold for emphasis.\nIf a tool fails, explain what happened and suggest alternatives."
+          "systemMessage": "You are Brain, Arthur's personal AI assistant with access to multiple tools and knowledge sources.\n\nAvailable capabilities:\n- get_calendar: Check today's meetings and schedule\n- search_email: Search Gmail messages by query\n- search_notes: Semantic search through Apple Notes\n- deep_research: Start deep research on a topic using NotebookLM\n- private_query: Query local LLM for private/sensitive questions\n\nGuidelines:\n1. Identify the user's intent from their message\n2. Select the appropriate tool(s) to fulfill the request\n3. Synthesize tool outputs into a helpful, concise response\n4. If the request is unclear, ask for clarification\n5. For multi-step requests, break down and execute sequentially\n\nAlways be concise and actionable - this is Slack, not an essay.\nFormat responses for readability: use bullet points, bold for emphasis.\nIf a tool fails, explain what happened and suggest alternatives."
         },
         "promptType": "define",
         "text": "={{ $json.user_message }}"
@@ -205,7 +205,7 @@
     },
     {
       "parameters": {
-        "content": "## ARTHUR Slack Agent\n\n### How It Works\n1. User @mentions ARTHUR or sends DM\n2. Message is parsed and cleaned\n3. AI Agent routes to appropriate tool\n4. Response sent in thread\n\n### Tools Available\n- **Calendar**: Today's events\n- **Gmail**: Email search\n- **Notes RAG**: Apple Notes search\n- **NotebookLM**: Deep research\n- **Local LLM**: Private queries\n\n### Setup Required\n1. Slack API credential\n2. Anthropic API credential\n3. Link calendar/gmail workflows\n4. Start bridge services",
+        "content": "## Brain Slack Agent\n\n### How It Works\n1. User @mentions @brain or sends DM\n2. Message is parsed and cleaned\n3. AI Agent routes to appropriate tool\n4. Response sent in thread\n\n### Tools Available\n- **Calendar**: Today's events\n- **Gmail**: Email search\n- **Notes RAG**: Apple Notes search\n- **NotebookLM**: Deep research\n- **Local LLM**: Private queries\n\n### Setup Required\n1. Slack API credential\n2. Anthropic API credential\n3. Link calendar/gmail workflows\n4. Start bridge services",
         "height": 480,
         "width": 300
       },

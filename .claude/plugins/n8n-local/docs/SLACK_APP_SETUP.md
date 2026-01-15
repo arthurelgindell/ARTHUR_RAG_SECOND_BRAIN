@@ -1,6 +1,6 @@
-# ARTHUR Slack App Setup Guide
+# Brain Slack App Setup Guide
 
-Complete setup guide for creating and configuring the ARTHUR Slack bot.
+Complete setup guide for creating and configuring the Brain Slack bot (`@brain`).
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ Complete setup guide for creating and configuring the ARTHUR Slack bot.
 1. Go to https://api.slack.com/apps
 2. Click **Create New App**
 3. Select **From scratch**
-4. App Name: `ARTHUR`
+4. App Name: `Brain`
 5. Select your workspace
 6. Click **Create App**
 
@@ -143,7 +143,7 @@ SLACK_APP_TOKEN=xapp-your-app-token
 
 ## Testing the Connection
 
-1. In Slack, find the ARTHUR bot in Apps
+1. In Slack, find the Brain bot in Apps
 2. Send a DM: "Hello"
 3. Check n8n executions to verify the trigger fired
 
