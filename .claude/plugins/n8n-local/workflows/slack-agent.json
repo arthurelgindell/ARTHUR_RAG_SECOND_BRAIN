@@ -1,0 +1,346 @@
+{
+  "name": "ARTHUR Slack Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "events": ["app_mention", "message"],
+        "options": {}
+      },
+      "id": "slack-trigger",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-cred",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "name": "user_message",
+              "value": "={{ $json.event?.text?.replace(/<@[A-Z0-9]+>/g, '').trim() || $json.text }}",
+              "type": "string"
+            },
+            {
+              "name": "channel",
+              "value": "={{ $json.event?.channel || $json.channel }}",
+              "type": "string"
+            },
+            {
+              "name": "thread_ts",
+              "value": "={{ $json.event?.thread_ts || $json.event?.ts || $json.ts }}",
+              "type": "string"
+            },
+            {
+              "name": "user_id",
+              "value": "={{ $json.event?.user || $json.user }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "parse-message",
+      "name": "Parse Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are ARTHUR, a personal AI assistant with access to multiple tools and knowledge sources.\n\nAvailable capabilities:\n- get_calendar: Check today's meetings and schedule\n- search_email: Search Gmail messages by query\n- search_notes: Semantic search through Apple Notes\n- deep_research: Start deep research on a topic using NotebookLM\n- private_query: Query local LLM for private/sensitive questions\n\nGuidelines:\n1. Identify the user's intent from their message\n2. Select the appropriate tool(s) to fulfill the request\n3. Synthesize tool outputs into a helpful, concise response\n4. If the request is unclear, ask for clarification\n5. For multi-step requests, break down and execute sequentially\n\nAlways be concise and actionable - this is Slack, not an essay.\nFormat responses for readability: use bullet points, bold for emphasis.\nIf a tool fails, explain what happened and suggest alternatives."
+        },
+        "promptType": "define",
+        "text": "={{ $json.user_message }}"
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-20250514",
+        "options": {
+          "maxTokens": 2048,
+          "temperature": 0.7
+        }
+      },
+      "id": "anthropic-model",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [700, 520],
+      "credentials": {
+        "anthropicApi": {
+          "id": "anthropic-cred",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionKey": "=thread_{{ $('Parse Message').first().json.thread_ts }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory-buffer",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [550, 520]
+    },
+    {
+      "parameters": {
+        "name": "get_calendar",
+        "description": "Get today's calendar events and meetings. Call this when the user asks about their schedule, meetings, appointments, or what's happening today.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "id": "tool-calendar",
+      "name": "Calendar Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [850, 520]
+    },
+    {
+      "parameters": {
+        "name": "search_email",
+        "description": "Search Gmail messages by query. Call this when the user asks about emails, messages, inbox, or wants to find specific emails. Requires a search query parameter.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "id": "tool-gmail",
+      "name": "Gmail Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [1000, 520]
+    },
+    {
+      "parameters": {
+        "name": "search_notes",
+        "description": "Semantic search through Apple Notes. Call this when the user wants to search their notes, find information in notes, or recall something they wrote down.",
+        "method": "POST",
+        "url": "http://localhost:8765/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"query\": $fromAI(\"query\", \"The search query for Apple Notes\", \"string\") } }}"
+      },
+      "id": "tool-notes-rag",
+      "name": "Notes RAG Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [850, 680]
+    },
+    {
+      "parameters": {
+        "name": "deep_research",
+        "description": "Start deep research on a topic using NotebookLM. Call this when the user wants to research something, learn about a topic, find sources, or do a deep dive on a subject.",
+        "method": "POST",
+        "url": "http://localhost:8766/research",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topic\": $fromAI(\"topic\", \"The research topic\", \"string\"), \"mode\": \"fast\" } }}"
+      },
+      "id": "tool-notebooklm",
+      "name": "NotebookLM Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1000, 680]
+    },
+    {
+      "parameters": {
+        "name": "private_query",
+        "description": "Query local LLM for private or sensitive questions. Only call this when the user explicitly asks for local, private, or offline processing of sensitive information.",
+        "method": "POST",
+        "url": "http://host.docker.internal:1234/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": \"local-model\", \"messages\": [{ \"role\": \"user\", \"content\": $fromAI(\"question\", \"The question for the local LLM\", \"string\") }], \"temperature\": 0.7 } }}"
+      },
+      "id": "tool-local-llm",
+      "name": "Local LLM Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1150, 600]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Parse Message').first().json.channel }}"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "thread_ts": "={{ $('Parse Message').first().json.thread_ts }}",
+          "mrkdwn": true
+        }
+      },
+      "id": "slack-reply",
+      "name": "Slack Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1000, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-cred",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## ARTHUR Slack Agent\n\n### How It Works\n1. User @mentions ARTHUR or sends DM\n2. Message is parsed and cleaned\n3. AI Agent routes to appropriate tool\n4. Response sent in thread\n\n### Tools Available\n- **Calendar**: Today's events\n- **Gmail**: Email search\n- **Notes RAG**: Apple Notes search\n- **NotebookLM**: Deep research\n- **Local LLM**: Private queries\n\n### Setup Required\n1. Slack API credential\n2. Anthropic API credential\n3. Link calendar/gmail workflows\n4. Start bridge services",
+        "height": 480,
+        "width": 300
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 480]
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Slack Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notes RAG Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NotebookLM Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local LLM Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "slack"
+    },
+    {
+      "name": "ai-agent"
+    },
+    {
+      "name": "arthur"
+    }
+  ]
+}
